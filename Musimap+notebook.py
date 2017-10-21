@@ -118,9 +118,13 @@ for r in results:
 artists = pd.read_excel('DGTL_lineup_2016.xlsx', encoding='latin_1')['artist']
 
 
-# In[28]:
+# In[90]:
 
 call = 'artists/search'
+
+
+df_moods = pd.DataFrame()
+
 
 for artist in artists:
 #artist = 'Adele' # note: other artists come first, the real Adele is #5
@@ -132,17 +136,57 @@ for artist in artists:
 # details, properties, moods, influences, memberships, discography, social (= ids of other web services)
 # (can be combined in comma-separated way)
 
-    params = {'nickname': artist, 'output': 'details', 'access_token': token}
+    params = {'nickname': artist, 'output': 'moods', 'access_token': token}
 #params = {'nickname': artist, 'output': 'rhythmicmoods'}
 
+    #Build dataframe with every mood by artist, and its importance
     resp = requests.get(base + call, params, headers=headers)
     
     json = resp.json()
     results = json['results']
+    index = len(df_moods)
     for r in results:
-        if r['score']==100:
-            print(r['nickname'])
         
+        if r['score']==100:
+            df_moods.loc[index, 'artist']= artist
+            for mood in r['moods']:
+                mood_name = mood['name']
+                mood_score = mood['importance']
+                df_moods.loc[index, mood_name]= mood_score    
+            break
+        else:
+            df_moods.loc[index, 'artist']= artist
+            break
+        
+        
+
+
+# In[105]:
+
+# Keep only moods that have a value for more than 10 artists
+df_moods = df_moods.loc[:, df_moods.count().sort_values()>10]
+
+
+# In[116]:
+
+# Drop artists that have no values for any of these columns
+df_moods = df_moods.dropna(axis =0, how='all', subset= df_moods.columns[1:])
+
+
+# In[120]:
+
+# Replace missing values with 0
+df_moods = df_moods.fillna(value = 0)
+
+
+# In[121]:
+
+df_moods
+
+
+# In[122]:
+
+df_moods.to_json('moods_by_dj_DGTL_2016.json')
 
 
 # In[ ]:
